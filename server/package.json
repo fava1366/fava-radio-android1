@@ -1,0 +1,19 @@
+{
+  "name": "fava-radio-server",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {"start": "node src/index.js", "dev": "node --watch src/index.js"},
+  "engines": {"node": ">=20"},
+  "dependencies": {
+    "@livekit/server-sdk": "^2.9.6",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1",
+    "socket.io": "^4.8.1"
+  }
+}

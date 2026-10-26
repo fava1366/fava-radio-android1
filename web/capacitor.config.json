@@ -1,0 +1,6 @@
+{
+  "appId": "ir.fava.radio",
+  "appName": "Fava Radio",
+  "webDir": "dist",
+  "server": { "androidScheme": "https" }
+}

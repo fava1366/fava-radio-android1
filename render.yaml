@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: fava-radio
+    runtime: node
+    plan: free
+    rootDir: .
+    buildCommand: npm install && npm --prefix web install && npm --prefix server install && npm --prefix web run build
+    startCommand: npm --prefix server start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_BOOTSTRAP_USERNAME
+        value: admin
+      - key: ADMIN_BOOTSTRAP_PASSWORD
+        sync: false
+      - key: INVITE_CODE
+        sync: false
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        value: '*'

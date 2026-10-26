@@ -1,0 +1,8 @@
+{
+  "name": "fava-radio",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Fava Radio Android-ready communications app and cloud backend starter",
+  "scripts": {"dev": "concurrently -k \"npm:dev:server\" \"npm:dev:web\"", "dev:server": "npm --prefix server run dev", "dev:web": "npm --prefix web run dev -- --host 0.0.0.0", "build": "npm --prefix web run build", "start": "npm --prefix server start"},
+  "devDependencies": {"concurrently": "^9.1.2"}
+}
