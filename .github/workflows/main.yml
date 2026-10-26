@@ -1,57 +1,16 @@
 
-name: Build Fava Radio APK
-
-on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
-      - master
-
-permissions:
-  contents: read
-
-jobs:
-  build:
-    name: Build Android APK
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Download project
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Build web application
-        working-directory: web
-        env:
-          VITE_API_URL: ${{ vars.VITE_API_URL }}
-        run: |
-          npm install
-          npm run build
-
-      - name: Prepare Android project
-        working-directory: web
-        run: |
-          npx cap add android
-          npx cap sync android
-
       - name: Set Android permissions
         run: |
           python - <<'PY'
+          import xml.etree.ElementTree as ET
           from pathlib import Path
 
           p = Path("web/android/app/src/main/AndroidManifest.xml")
-          s = p.read_text()
+          tree = ET.parse(p)
+          root = tree.getroot()
+
+          android_ns = "http://schemas.android.com/apk/res/android"
+          ET.register_namespace("android", android_ns)
 
           permissions = [
               "android.permission.INTERNET",
@@ -61,28 +20,18 @@ jobs:
               "android.permission.ACCESS_FINE_LOCATION",
           ]
 
+          existing = {
+              item.get(f"{{{android_ns}}}name")
+              for item in root.findall("uses-permission")
+          }
+
           for permission in permissions:
-              line = f'<uses-permission android:name="{permission}" />'
-              if line not in s:
-                  s = s.replace(
-                      "<manifest",
-                      "<manifest\n    " + line,
-                      1
-                  )
+              if permission not in existing:
+                  item = ET.Element("uses-permission")
+                  item.set(f"{{{android_ns}}}name", permission)
+                  root.insert(0, item)
 
-          p.write_text(s)
+          tree.write(p, encoding="utf-8", xml_declaration=True)
+          ET.parse(p)
+          print("AndroidManifest.xml is valid.")
           PY
-
-      - name: Build APK
-        working-directory: web/android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: fava-radio-debug-apk
-          path: web/android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 7
