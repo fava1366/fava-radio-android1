@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download project
+      - name: Checkout project
         uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -25,28 +25,38 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Setup Java
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
+          cache: gradle
+
+      - name: Check project files
+        run: |
+          test -f web/package.json
+          test -f web/capacitor.config.ts -o -f web/capacitor.config.json
+          echo "Project files found."
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm install --no-audit --no-fund
 
       - name: Build web application
         working-directory: web
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
-        run: |
-          npm install
-          npm run build
+        run: npm run build
 
       - name: Prepare Android project
         working-directory: web
         run: |
-          npx cap add android
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
           npx cap sync android
 
-      
-      - name: Set Android permissions
+      - name: Validate and set Android permissions
         run: |
           python - <<'PY'
           import xml.etree.ElementTree as ET
@@ -56,8 +66,8 @@ jobs:
           tree = ET.parse(p)
           root = tree.getroot()
 
-          android_ns = "http://schemas.android.com/apk/res/android"
-          ET.register_namespace("android", android_ns)
+          ns = "http://schemas.android.com/apk/res/android"
+          ET.register_namespace("android", ns)
 
           permissions = [
               "android.permission.INTERNET",
@@ -68,28 +78,36 @@ jobs:
           ]
 
           existing = {
-              item.get(f"{{{android_ns}}}name")
-              for item in root.findall("uses-permission")
+              element.get(f"{{{ns}}}name")
+              for element in root.findall("uses-permission")
           }
 
           for permission in permissions:
               if permission not in existing:
-                  item = ET.Element("uses-permission")
-                  item.set(f"{{{android_ns}}}name", permission)
-                  root.insert(0, item)
+                  element = ET.Element("uses-permission")
+                  element.set(f"{{{ns}}}name", permission)
+                  root.insert(0, element)
 
-          tree.write(p, encoding="utf-8", xml_declaration=True)
+          tree.write(
+              p,
+              encoding="utf-8",
+              xml_declaration=True
+          )
+
           ET.parse(p)
           print("AndroidManifest.xml is valid.")
           PY
 
-      - name: Build APK
+      - name: Verify Java version
+        run: java -version
+
+      - name: Build debug APK
         working-directory: web/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew --no-daemon assembleDebug
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: fava-radio-debug-apk
